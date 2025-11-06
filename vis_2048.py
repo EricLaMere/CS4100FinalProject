@@ -1,16 +1,15 @@
-import vis_2048
 import sys
 import pygame
 from game_2048 import Game2048 
 
-# Constants
-WINDOW_SIZE = 500
+# Window Constants
 GRID_SIZE = 4
+CELL_PADDING = 5
+WINDOW_SIZE = 600
 CELL_SIZE = WINDOW_SIZE // (GRID_SIZE + 1)
-CELL_PAD = 10
 FPS = 60
 
-# Colors
+# Cell Colors 
 BACKGROUND = (187, 173, 160)
 EMPTY_CELL = (205, 193, 180)
 CELL_COLORS = {
@@ -30,18 +29,15 @@ CELL_COLORS = {
 TEXT_DARK = (119, 110, 101)
 TEXT_LIGHT = (249, 246, 242)
 
-# Initialize Pygame
+# Pygame setup 
 pygame.init()
-
-# Setup display
 screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
-pygame.display.set_caption('2048')
 clock = pygame.time.Clock()
 
+# Draw the gui
 def draw_grid(game):
     screen.fill(BACKGROUND)
 
-    # Draw title and score
     title_font = pygame.font.Font(None, 60)
     score_font = pygame.font.Font(None, 36)
 
@@ -52,16 +48,18 @@ def draw_grid(game):
     screen.blit(score_text, (WINDOW_SIZE - 180, 30))
 
     # Draw grid
-    offset = 80
+    x_offset = 20
+    y_offset = 70
     for i in range(GRID_SIZE):
         for j in range(GRID_SIZE):
             value = game.grid[i][j]
-            x = j * CELL_SIZE + CELL_PAD + offset
-            y = i * CELL_SIZE + CELL_PAD + offset
+            x = j * CELL_SIZE + CELL_PADDING + x_offset
+            y = i * CELL_SIZE + CELL_PADDING + y_offset
 
             # Draw cell background
             color = CELL_COLORS.get(value, CELL_COLORS[4096]) if value else EMPTY_CELL
-            pygame.draw.rect(screen, color, (x, y, CELL_SIZE - 2 * CELL_PAD, CELL_SIZE - 2 * CELL_PAD), border_radius=5)
+            pygame.draw.rect(screen, color, (x, y, CELL_SIZE - 2 * CELL_PADDING, 
+                CELL_SIZE - 2 * CELL_PADDING), border_radius=5)
 
             # Draw number
             if value:
@@ -70,10 +68,10 @@ def draw_grid(game):
                 text_color = TEXT_DARK if value <= 4 else TEXT_LIGHT
                 text = font.render(str(value), True, text_color)
                 text_rect = text.get_rect(
-                    center=(x + (CELL_SIZE - 2 * CELL_PAD) // 2, y + (CELL_SIZE - 2 * CELL_PAD) // 2))
+                    center=(x + (CELL_SIZE - 2 * CELL_PADDING) // 2, y + (CELL_SIZE - 2 * CELL_PADDING) // 2))
                 screen.blit(text, text_rect)
 
-    # Game over message
+    # Print game over to screen
     if game.game_over:
         overlay = pygame.Surface((WINDOW_SIZE, WINDOW_SIZE))
         overlay.set_alpha(180)
@@ -81,17 +79,14 @@ def draw_grid(game):
         screen.blit(overlay, (0, 0))
 
         game_over_font = pygame.font.Font(None, 72)
-        restart_font = pygame.font.Font(None, 36)
-
         game_over_text = game_over_font.render('Game Over!', True, TEXT_DARK)
-        restart_text = restart_font.render('Press R to Restart', True, TEXT_DARK)
-
-        screen.blit(game_over_text, (WINDOW_SIZE // 2 - game_over_text.get_width() // 2, WINDOW_SIZE // 2 - 50))
-        screen.blit(restart_text, (WINDOW_SIZE // 2 - restart_text.get_width() // 2, WINDOW_SIZE // 2 + 20))
+        screen.blit(game_over_text, (WINDOW_SIZE // 2 - game_over_text.get_width() // 2, 
+            WINDOW_SIZE // 2 - 50))
 
     pygame.display.flip()
 
 
+# Run the game visualized
 def main():
     game = Game2048(GRID_SIZE)
 
