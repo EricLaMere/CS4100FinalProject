@@ -1,6 +1,7 @@
 import sys
+import gym
 import pygame
-from game_2048 import Game2048 
+from game_2048_gym import Game2048Env
 
 # Window Constants
 GRID_SIZE = 4
@@ -29,10 +30,20 @@ CELL_COLORS = {
 TEXT_DARK = (119, 110, 101)
 TEXT_LIGHT = (249, 246, 242)
 
-# Pygame setup 
-pygame.init()
-screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
-clock = pygame.time.Clock()
+# Pygame setup globals
+screen = None
+clock = None
+
+game = Game2048Env()
+
+# setup pygame
+def setup(GUI=True):
+    global screen, clock
+    if GUI:
+        pygame.init()
+        screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
+        pygame.display.set_caption("2048 Game")
+        clock = pygame.time.Clock()
 
 # Draw the gui
 def draw_grid(game):
@@ -88,7 +99,8 @@ def draw_grid(game):
 
 # Run the game visualized
 def main():
-    game = Game2048(GRID_SIZE)
+    setup()  # initialize pygame
+    game = Game2048Env()  # Use the Gym environment
 
     while True:
         for event in pygame.event.get():
@@ -100,13 +112,13 @@ def main():
                 if event.key == pygame.K_r:
                     game.reset()
                 elif event.key == pygame.K_LEFT:
-                    game.move('LEFT')
+                    game.step('LEFT')
                 elif event.key == pygame.K_RIGHT:
-                    game.move('RIGHT')
+                    game.step('RIGHT')
                 elif event.key == pygame.K_UP:
-                    game.move('UP')
+                    game.step('UP')
                 elif event.key == pygame.K_DOWN:
-                    game.move('DOWN')
+                    game.step('DOWN')
 
         draw_grid(game)
         clock.tick(FPS)
