@@ -110,8 +110,8 @@ def Q_learning(num_episodes=1000, decay_rate=0.999, gamma=0.9, epsilon=1):
     return Q_table
 
 
-num_episodes = 1000
-decay_rate = 0.999
+num_episodes = 100000
+decay_rate = 0.99999
 
 # train agent
 if train_flag: 
@@ -121,6 +121,67 @@ if train_flag:
     with open('Q_table_'+str(num_episodes)+'_'+str(decay_rate)+'.pickle', 'wb') as handle:
         pickle.dump(Q_table, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-# Evaluate agent
+# evaluate agent
 if not train_flag:
-    Q_table = None
+    rewards = []
+    episode_lengths = []
+    episode_times = []
+    seen_states = set()
+    total_actions = 0
+    actions_using_Q = 0
+
+    # load q-table
+    filename = 'Q_table_'+str(num_episodes)+'_'+str(decay_rate)+'.pickle'
+    input(f"\n{BOLD}Currently loading Q-table from "+filename+f"{RESET}.  \n\nPress Enter to confirm, or Ctrl+C to cancel and load a different Q-table file.\n(set num_episodes and decay_rate in Q_learning.py).")
+    Q_table = np.load(filename, allow_pickle=True)
+
+    for episode in tqdm(range(10000), desc="Evaluating"):
+        obs = env.reset()
+        total_reward = 0
+        steps = 0
+        start_time = time.time()
+
+        while not env.game_over and not env.reached_2048 and steps < env.max_steps:
+            state = hash_state(obs)
+            seen_states.add(state)
+
+            # select action using Q-table
+            if state in Q_table:
+                action = np.argmax(Q_table[state])
+                actions_using_Q += 1
+            else:
+                action = env.action_space.sample()
+
+            total_actions += 1
+
+            next_obs, reward, done, info = env.step(action)
+            total_reward += reward
+            steps += 1
+            obs = next_obs
+
+            if done:
+                break
+
+        end_time = time.time()
+        rewards.append(total_reward)
+        episode_lengths.append(steps)
+        episode_times.append(end_time - start_time)
+
+    # calculate final statistics
+    avg_reward = np.mean(rewards)
+    avg_length = np.mean(episode_lengths)
+    total_time = np.sum(episode_times)
+
+    # print evaluation results
+    print("Unique states in Q-table:", len(Q_table))
+    print(f"Average reward over 10,000 episodes: {avg_reward:.2f}")
+    print(f"Average episode length: {avg_length:.2f} steps")
+    print(f"Total time to play 10,000 episodes: {total_time:.2f} seconds")
+
+    # states unseen in training
+    unique_unseen_states = seen_states - set(Q_table.keys())
+    print("Unique states unseen during training:", len(unique_unseen_states))
+
+    # percent of actions driven by Q-table
+    percent_Q_usage = (actions_using_Q / total_actions) * 100
+    print(f"Percentage of actions chosen using Q-table: {percent_Q_usage:.2f}%")

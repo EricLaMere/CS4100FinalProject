@@ -33,10 +33,12 @@ class Game2048Env(gym.Env):
         
         # define rewards
         self.rewards = {
-            'invalid_move': -10,    # penalty for moves that don't change grid
+            'invalid_move': -10,    # moderate penalty for moves that don't change grid
+            'valid_move': 1,        # small reward for any valid move
             'tile_merge': 0,        # base reward for merging
-            'game_over': -1000,      # large penalty for game over
-            'reach_2048': 10000,     # large reward for reaching 2048
+            'game_over': -100,      # moderate penalty for game over
+            'reach_2048': 2048,     # large reward for reaching 2048
+            'step': -0.1            # small penalty for each step to encourage faster games
         }
         
         # reset the game to start
@@ -266,6 +268,9 @@ class Game2048Env(gym.Env):
 
         # otherwise, calculate reward for valid move
         else:
+            # reward for making a valid move
+            reward += self.rewards['valid_move']
+            
             # add score gained from merges
             reward += score_gained
             
@@ -276,6 +281,9 @@ class Game2048Env(gym.Env):
             # reward for achieving new max tile
             if max_tile_current > max_tile_prev:
                 reward += np.log2(max_tile_current) * 10 # * 10 to encourage higher merges
+        
+        # apply step penalty to encourage faster games
+        reward += self.rewards['step']
         
         return reward
 
