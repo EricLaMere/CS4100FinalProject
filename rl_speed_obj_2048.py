@@ -100,6 +100,33 @@ def Q_learning(num_episodes=1000, decay_rate=0.999, gamma=0.9, epsilon=1):
 
         current_epsilon *= decay_rate
 
+    # create high-resolution training rewards plot (used ai to help format the plot)
+    plt.figure(figsize=(12, 8), dpi=300)
+    episodes = range(1, len(episode_rewards) + 1)
+    plt.plot(episodes, episode_rewards, alpha=0.3, color='lightblue', linewidth=0.5, label='Episode Rewards')
+    # moving average
+    window_size = max(1, num_episodes // 50)
+    if len(episode_rewards) >= window_size:
+        moving_avg = []
+        for i in range(len(episode_rewards)):
+            start_idx = max(0, i - window_size + 1)
+            end_idx = i + 1
+            moving_avg.append(np.mean(episode_rewards[start_idx:end_idx]))
+        plt.plot(episodes, moving_avg, color='darkblue', linewidth=2,
+                 label=f'Moving Average (window={window_size})')
+    plt.title(
+        f'Q-Learning Training Progress: Rewards per Episode\n(Episodes: {num_episodes}, ε decay: {decay_rate})',
+        fontsize=16, fontweight='bold', pad=20)
+    plt.xlabel('Episode', fontsize=14, fontweight='bold')
+    plt.ylabel('Total Reward', fontsize=14, fontweight='bold')
+    plt.grid(True, alpha=0.3)
+    plt.legend(fontsize=12)
+    plt.xlim(1, num_episodes)
+    plt.tight_layout()
+    plt.savefig(f'training_rewards_{num_episodes}_{decay_rate}.png', dpi=300, bbox_inches='tight',
+                facecolor='white')
+    plt.show()
+
     # final statistics
     print(f"\nTraining completed!")
     print(f"Total states discovered: {len(Q_table)}")
