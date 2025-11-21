@@ -147,6 +147,7 @@ if train_flag:
 if not train_flag:
     rewards = []
     episode_lengths = []
+    max_tiles_achieved = []
     episode_times = []
     seen_states = set()
     total_actions = 0
@@ -187,6 +188,7 @@ if not train_flag:
         end_time = time.time()
         rewards.append(total_reward)
         episode_lengths.append(steps)
+        max_tiles_achieved.append(env.get_max_tile())
         episode_times.append(end_time - start_time)
 
     # calculate final statistics
@@ -199,6 +201,7 @@ if not train_flag:
     print(f"Average reward over 10,000 episodes: {avg_reward:.2f}")
     print(f"Average episode length: {avg_length:.2f} steps")
     print(f"Total time to play 10,000 episodes: {total_time:.2f} seconds")
+    print(f"Max tile achieved: {np.max(max_tiles_achieved)}")
 
     # states unseen in training
     unique_unseen_states = seen_states - set(Q_table.keys())
