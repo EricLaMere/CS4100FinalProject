@@ -129,7 +129,25 @@ def Q_learning(num_episodes=1000, decay_rate=0.999, gamma=0.9, epsilon=1):
     print(f"Total states discovered: {len(Q_table)}")
     print(f"Average final reward: {np.mean(episode_rewards[-100:]) if len(episode_rewards) >= 100 else np.mean(episode_rewards):.2f}")
     print(f"Max tile achieved: {np.max(max_tiles_achieved)}")
-    return Q_table
+    
+    return Q_table, N_table
+
+
+def prune_qtable(Q_table, N_table, min_visits=5):
+    print(f"Pruning Q-table")
+    print(f"Original states: {len(Q_table)}")
+
+    visited_states = set()
+    for (state, action), count in N_table.items():
+        if count >= min_visits:
+            visited_states.add(state)
+
+    # only keep state-action pairs visited 5+ times
+    pruned_Q = {state: actions for state, actions in Q_table.items() if state in visited_states}
+
+    print(f"Pruned states: {len(pruned_Q)} ({len(pruned_Q) / len(Q_table) * 100:.1f}% kept)")
+
+    return pruned_Q
 
 
 num_episodes = 1000
@@ -137,7 +155,11 @@ decay_rate = 0.99
 
 # train agent
 if train_flag: 
-    Q_table = Q_learning(num_episodes=num_episodes, decay_rate=decay_rate, gamma=0.9, epsilon=1)
+    Q_table, N_table = Q_learning(num_episodes=num_episodes, decay_rate=decay_rate, gamma=0.9, epsilon=1)
+
+if num_episodes > 100000:
+    # reduce size of Q table
+    Q_table = prune_qtable(Q_table, N_table, min_visits=5)
 
     # save Q-table
     with open('Q_table_'+str(num_episodes)+'_'+str(decay_rate)+'.pickle', 'wb') as handle:
@@ -155,7 +177,7 @@ if not train_flag:
 
     # load q-table
     filename = 'Q_table_'+str(num_episodes)+'_'+str(decay_rate)+'.pickle'
-    input(f"\n{BOLD}Currently loading Q-table from "+filename+f"{RESET}.  \n\nPress Enter to confirm, or Ctrl+C to cancel and load a different Q-table file.\n(set num_episodes and decay_rate in Q_learning.py).")
+    input(f"\n{BOLD}Currently loading Q-table from "+filename+f"{RESET}.  \n\nPress Enter to confirm, or Ctrl+C to cancel and load a different Q-table file.\n(set num_episodes and decay_rate in rl_2048.py).")
     Q_table = np.load(filename, allow_pickle=True)
 
     for episode in tqdm(range(10000), desc="Evaluating"):
@@ -210,3 +232,42 @@ if not train_flag:
     # percent of actions driven by Q-table
     percent_Q_usage = (actions_using_Q / total_actions) * 100
     print(f"Percentage of actions chosen using Q-table: {percent_Q_usage:.2f}%")
+
+
+    # Create evaluation visualizations
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6), dpi=300)
+    fig.suptitle(f'Evaluation Results: {num_episodes} Training Episodes, {decay_rate} Decay', fontsize=16, fontweight='bold', y=1.02)
+
+    # subplot 1: rolling avg reward 
+    window = 100
+    rolling_avg = pd.Series(rewards).rolling(window=window, min_periods=1).mean()
+    axes[0].plot(range(len(rewards)), rewards, alpha=0.2, color='lightblue', linewidth=0.5, label='Episode Reward')
+    axes[0].plot(range(len(rolling_avg)), rolling_avg, color='darkblue', linewidth=2, label=f'{window}-Episode Moving Avg')
+    axes[0].axhline(avg_reward, color='red', linestyle='--', linewidth=1.5, label=f'Overall Mean: {avg_reward:.1f}')
+    axes[0].set_xlabel('Evaluation Episode', fontsize=12, fontweight='bold')
+    axes[0].set_ylabel('Total Reward', fontsize=12, fontweight='bold')
+    axes[0].set_title('Reward Progression During Evaluation', fontsize=14, fontweight='bold')
+    axes[0].legend(fontsize=10)
+    axes[0].grid(True, alpha=0.3)
+
+    # subplot 2: max tile distribution
+    tile_counts = pd.Series(max_tiles_achieved).value_counts().sort_index()
+    bars = axes[1].bar(range(len(tile_counts)), tile_counts.values, color='coral', edgecolor='black', alpha=0.7)
+    axes[1].set_xticks(range(len(tile_counts)))
+    axes[1].set_xticklabels([int(tile) for tile in tile_counts.index], rotation=45)
+    axes[1].set_xlabel('Max Tile Achieved', fontsize=12, fontweight='bold')
+    axes[1].set_ylabel('Frequency', fontsize=12, fontweight='bold')
+    axes[1].set_title(f'Max Tile Distribution (Best: {np.max(max_tiles_achieved)})', fontsize=14, fontweight='bold')
+    axes[1].grid(True, alpha=0.3, axis='y')
+
+    # add percentage labels on bars
+    for i, (bar, count) in enumerate(zip(bars, tile_counts.values)):
+        height = bar.get_height()
+        pct = (count / len(max_tiles_achieved)) * 100
+        axes[1].text(bar.get_x() + bar.get_width() / 2., height, f'{pct:.1f}%', ha='center', va='bottom', fontsize=9)
+
+    plt.tight_layout()
+    eval_plot_filename = f'evaluation_results_{num_episodes}_{decay_rate}.png'
+    plt.savefig(eval_plot_filename, dpi=300, bbox_inches='tight', facecolor='white')
+    print(f"\nEvaluation plots saved to: {eval_plot_filename}")
+    plt.close()
