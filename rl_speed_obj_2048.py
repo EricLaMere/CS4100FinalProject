@@ -48,6 +48,7 @@ def Q_learning(num_episodes=1000, decay_rate=0.999, gamma=0.9, epsilon=1):
         obs = env.reset()
         steps = 0
         reward = 0
+        total_reward = 0
 
         while not env.game_over and not env.reached_2048 and steps < env.max_steps:
             state = hash_state(obs)
@@ -74,6 +75,8 @@ def Q_learning(num_episodes=1000, decay_rate=0.999, gamma=0.9, epsilon=1):
             else:
                 reward = -1  # small penalty for each step to encourage speed
 
+            total_reward += reward
+
             if next_state not in Q_table:
                 Q_table[next_state] = np.zeros(env.action_space.n)
 
@@ -95,6 +98,7 @@ def Q_learning(num_episodes=1000, decay_rate=0.999, gamma=0.9, epsilon=1):
                 break
 
         episode_lengths.append(steps)
+        episode_rewards.append(total_reward)
         if env.reached_2048:
             success_count += 1
             successful_episode_lengths.append(steps)
