@@ -47,6 +47,7 @@ def Q_learning(num_episodes=1000, decay_rate=0.999, gamma=0.9, epsilon=1):
     for episode in tqdm(range(num_episodes), desc="Training"):
         obs = env.reset()
         steps = 0
+        reward = 0
 
         while not env.game_over and not env.reached_2048 and steps < env.max_steps:
             state = hash_state(obs)
@@ -277,3 +278,5 @@ if not train_flag:
     plt.savefig(eval_plot_filename, dpi=300, bbox_inches='tight', facecolor='white')
     print(f"Evaluation plots saved to: {eval_plot_filename}")
     plt.close()
+
+    
