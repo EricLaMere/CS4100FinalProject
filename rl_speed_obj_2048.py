@@ -139,7 +139,12 @@ def Q_learning(num_episodes=1000, decay_rate=0.999, gamma=0.9, epsilon=1):
     if successful_episode_lengths:
         print(f"Average steps to reach 2048 (successful episodes): {np.mean(successful_episode_lengths):.2f}")
         print(f"Best (fastest) run: {np.min(successful_episode_lengths)} steps")
-
+    # Print average final reward and max tile achieved
+    avg_final_reward = np.mean(episode_rewards[-100:]) if len(episode_rewards) >= 100 else np.mean(episode_rewards)
+    print(f"Average final reward: {avg_final_reward:.2f}")
+    # Track max tile achieved for all episodes
+    all_max_tiles = [env.get_max_tile() for _ in range(num_episodes)] if not episode_rewards else [env.get_max_tile() for _ in range(len(episode_rewards))]
+    print(f"Max tile achieved: {np.max(all_max_tiles)}")
     return Q_table, N_table
 
 
@@ -181,6 +186,8 @@ if not train_flag:
     actions_using_Q = 0
     success_count = 0
     successful_episode_lengths = []
+    rewards = []
+    max_tiles_achieved = []
 
     filename = 'Q_table_' + str(num_episodes) + '_' + str(decay_rate) + '_speed_obj.pickle'
     input(
@@ -191,6 +198,7 @@ if not train_flag:
         obs = env.reset()
         steps = 0
         start_time = time.time()
+        total_rewards_eval = 0
 
         while not env.game_over and not env.reached_2048 and steps < env.max_steps:
             state = hash_state(obs)
@@ -207,10 +215,13 @@ if not train_flag:
             next_obs, reward, done, info = env.step(action)
             steps += 1
             obs = next_obs
+            total_rewards_eval += reward
 
             if done:
                 break
 
+        rewards.append(total_rewards_eval)
+        max_tiles_achieved.append(env.get_max_tile())
         end_time = time.time()
         episode_lengths.append(steps)
         episode_times.append(end_time - start_time)
@@ -218,6 +229,8 @@ if not train_flag:
         if env.reached_2048:
             success_count += 1
             successful_episode_lengths.append(steps)
+    avg_reward = np.mean(rewards)
+    print(f"Average reward over 10,000 episodes: {avg_reward:.2f}")
 
     # final statistics
     avg_length = np.mean(episode_lengths)
@@ -250,8 +263,6 @@ if not train_flag:
                  linewidth=0.5, label='Episode Reward')
     axes[0].plot(range(len(rolling_avg)), rolling_avg, color='darkblue',
                  linewidth=2, label=f'{window}-Episode Moving Avg')
-    axes[0].axhline(avg_reward, color='red', linestyle='--', linewidth=1.5,
-                    label=f'Overall Mean: {avg_reward:.1f}')
     axes[0].set_xlabel('Evaluation Episode', fontsize=12, fontweight='bold')
     axes[0].set_ylabel('Total Reward', fontsize=12, fontweight='bold')
     axes[0].set_title('Reward Progression During Evaluation', fontsize=14, fontweight='bold')
