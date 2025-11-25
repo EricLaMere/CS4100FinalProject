@@ -123,7 +123,7 @@ def Q_learning(num_episodes=1000, decay_rate=0.999, gamma=0.9, epsilon=1):
     plt.legend(fontsize=12)
     plt.xlim(1, num_episodes)
     plt.tight_layout()
-    plt.savefig(f'training_rewards_{num_episodes}_{decay_rate}.png', dpi=300, bbox_inches='tight',
+    plt.savefig(f'training_rewards_{num_episodes}_{decay_rate}_speed_obj.png', dpi=300, bbox_inches='tight',
                 facecolor='white')
     plt.show()
 
@@ -135,14 +135,35 @@ def Q_learning(num_episodes=1000, decay_rate=0.999, gamma=0.9, epsilon=1):
         print(f"Average steps to reach 2048 (successful episodes): {np.mean(successful_episode_lengths):.2f}")
         print(f"Best (fastest) run: {np.min(successful_episode_lengths)} steps")
 
-    return Q_table
+    return Q_table, N_table
+
+
+def prune_qtable(Q_table, N_table, min_visits=5):
+    print(f"Pruning Q-table")
+    print(f"Original states: {len(Q_table)}")
+
+    visited_states = set()
+    for (state, action), count in N_table.items():
+        if count >= min_visits:
+            visited_states.add(state)
+
+    # only keep state-action pairs visited 5+ times
+    pruned_Q = {state: actions for state, actions in Q_table.items() if state in visited_states}
+
+    print(f"Pruned states: {len(pruned_Q)} ({len(pruned_Q) / len(Q_table) * 100:.1f}% kept)")
+
+    return pruned_Q
 
 
 num_episodes = 1000
 decay_rate = 0.999
 
 if train_flag:
-    Q_table = Q_learning(num_episodes=num_episodes, decay_rate=decay_rate, gamma=0.9, epsilon=1)
+    Q_table, N_table = Q_learning(num_episodes=num_episodes, decay_rate=decay_rate, gamma=0.9, epsilon=1)
+
+    if num_episodes > 100000:
+        # only look at states visited 5 times to save space in Q table
+        Q_table = prune_qtable(Q_table, N_table, min_visits=5)
 
     with open('Q_table_' + str(num_episodes) + '_' + str(decay_rate) + '_speed_obj.pickle', 'wb') as handle:
         pickle.dump(Q_table, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -211,3 +232,48 @@ if not train_flag:
 
     percent_Q_usage = (actions_using_Q / total_actions) * 100
     print(f"Percentage of actions chosen using Q-table: {percent_Q_usage:.2f}%")
+
+    # Create evaluation visualizations
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6), dpi=300)
+    fig.suptitle(f'Evaluation Results: {num_episodes} Training Episodes, {decay_rate} Decay',
+                 fontsize=16, fontweight='bold', y=1.02)
+
+    # Subplot 1: rolling avg reward
+    window = 100
+    rolling_avg = pd.Series(rewards).rolling(window=window, min_periods=1).mean()
+    axes[0].plot(range(len(rewards)), rewards, alpha=0.2, color='lightblue',
+                 linewidth=0.5, label='Episode Reward')
+    axes[0].plot(range(len(rolling_avg)), rolling_avg, color='darkblue',
+                 linewidth=2, label=f'{window}-Episode Moving Avg')
+    axes[0].axhline(avg_reward, color='red', linestyle='--', linewidth=1.5,
+                    label=f'Overall Mean: {avg_reward:.1f}')
+    axes[0].set_xlabel('Evaluation Episode', fontsize=12, fontweight='bold')
+    axes[0].set_ylabel('Total Reward', fontsize=12, fontweight='bold')
+    axes[0].set_title('Reward Progression During Evaluation', fontsize=14, fontweight='bold')
+    axes[0].legend(fontsize=10)
+    axes[0].grid(True, alpha=0.3)
+
+    # subplot 2: max tile distribution
+    tile_counts = pd.Series(max_tiles_achieved).value_counts().sort_index()
+    bars = axes[1].bar(range(len(tile_counts)), tile_counts.values,
+                       color='coral', edgecolor='black', alpha=0.7)
+    axes[1].set_xticks(range(len(tile_counts)))
+    axes[1].set_xticklabels([int(tile) for tile in tile_counts.index], rotation=45)
+    axes[1].set_xlabel('Max Tile Achieved', fontsize=12, fontweight='bold')
+    axes[1].set_ylabel('Frequency', fontsize=12, fontweight='bold')
+    axes[1].set_title(f'Max Tile Distribution (Best: {np.max(max_tiles_achieved)})',
+                      fontsize=14, fontweight='bold')
+    axes[1].grid(True, alpha=0.3, axis='y')
+
+    # Add percentage labels on bars
+    for i, (bar, count) in enumerate(zip(bars, tile_counts.values)):
+        height = bar.get_height()
+        pct = (count / len(max_tiles_achieved)) * 100
+        axes[1].text(bar.get_x() + bar.get_width() / 2., height,
+                     f'{pct:.1f}%', ha='center', va='bottom', fontsize=9)
+
+    plt.tight_layout()
+    eval_plot_filename = f'evaluation_results_{num_episodes}_{decay_rate}_speed_obj.png'
+    plt.savefig(eval_plot_filename, dpi=300, bbox_inches='tight', facecolor='white')
+    print(f"Evaluation plots saved to: {eval_plot_filename}")
+    plt.close()
