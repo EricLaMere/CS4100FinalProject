@@ -126,7 +126,7 @@ def Q_learning(num_episodes=1000, decay_rate=0.999, gamma=0.9, epsilon=1):
     plt.tight_layout()
     plt.savefig(f'training_rewards_{num_episodes}_{decay_rate}_speed_obj.png', dpi=300, bbox_inches='tight',
                 facecolor='white')
-    plt.show()
+
 
     # final statistics
     print(f"\nTraining completed!")
@@ -280,3 +280,4 @@ if not train_flag:
     plt.close()
 
     
+
