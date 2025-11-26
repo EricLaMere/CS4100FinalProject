@@ -1,3 +1,4 @@
+
 import sys
 import time
 import pickle
@@ -15,8 +16,18 @@ RESET = '\033[0m' # ANSI escape sequence to reset text formatting
 train_flag = 'train' in sys.argv
 gui_flag = 'gui' in sys.argv
 
+# setup gui if needed
 setup(GUI=gui_flag)
-env = game # Gym environment already initialized within vis_2048.py
+env = game
+
+# define refresh function for GUI updates (used ai to help with this)
+def refresh(env, delay=0.1):
+    draw_grid(env)
+    import pygame
+    pygame.display.flip()
+    if 'clock' in globals() and clock:
+        clock.tick(60)
+    time.sleep(delay)
 
 # define hashing function for state representation
 def hash_state(obs):
@@ -151,7 +162,7 @@ def prune_qtable(Q_table, N_table, min_visits=5):
 
 
 num_episodes = 1000
-decay_rate = 0.99
+decay_rate = 0.999
 
 # train agent
 if train_flag: 
@@ -167,6 +178,7 @@ if num_episodes > 100000:
 
 # evaluate agent
 if not train_flag:
+
     rewards = []
     episode_lengths = []
     max_tiles_achieved = []
@@ -180,7 +192,8 @@ if not train_flag:
     input(f"\n{BOLD}Currently loading Q-table from "+filename+f"{RESET}.  \n\nPress Enter to confirm, or Ctrl+C to cancel and load a different Q-table file.\n(set num_episodes and decay_rate in rl_2048.py).")
     Q_table = np.load(filename, allow_pickle=True)
 
-    for episode in tqdm(range(10000), desc="Evaluating"):
+    eval_episodes = 1 if gui_flag else 10000
+    for episode in tqdm(range(eval_episodes), desc="Evaluating"):
         obs = env.reset()
         total_reward = 0
         steps = 0
@@ -204,6 +217,9 @@ if not train_flag:
             steps += 1
             obs = next_obs
 
+            if gui_flag:
+                refresh(env, delay=0.1)
+                pygame.event.pump()
             if done:
                 break
 
