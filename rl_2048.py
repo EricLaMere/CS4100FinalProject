@@ -161,18 +161,18 @@ def prune_qtable(Q_table, N_table, min_visits=5):
     return pruned_Q
 
 
-num_episodes = 1000
-decay_rate = 0.999
+num_episodes = 100000
+decay_rate = 0.999999
 
 # train agent
 if train_flag: 
     Q_table, N_table = Q_learning(num_episodes=num_episodes, decay_rate=decay_rate, gamma=0.9, epsilon=1)
 
-if num_episodes > 100000:
-    # reduce size of Q table
-    Q_table = prune_qtable(Q_table, N_table, min_visits=5)
-
-    # save Q-table
+    # prune Q-table only if num_episodes > 100000
+    if num_episodes > 100000:
+        Q_table = prune_qtable(Q_table, N_table, min_visits=5)
+        
+    # always save Q-table after training
     with open('Q_table_'+str(num_episodes)+'_'+str(decay_rate)+'.pickle', 'wb') as handle:
         pickle.dump(Q_table, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
